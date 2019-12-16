@@ -12,6 +12,15 @@
     
     
     <item>
+      <title>About</title>
+      <link>/aboutme/</link>
+      <pubDate>Sun, 15 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/aboutme/</guid>
+      <description>Brenna Briles is a 22 year old graduating senior at the University of Texas at Austin. She was born in College Station, Texas and moved to Austin for college. She is pursuing a Bachelor of Science and Arts in Biology with minors in Sociology and Women and Gender Studies. After graduation, she will be attending medical school in the fall of 2020. She will be the first person in her family to earn a professional degree and to become a physician.</description>
+    </item>
+    
+    <item>
       <title>Practice with Python</title>
       <link>/blog/practice-with-python/</link>
       <pubDate>Sun, 15 Dec 2019 00:00:00 +0000</pubDate>
@@ -20,6 +29,16 @@
       <description>This post contains sample problems using Python from homework assignments in SDS348: Computational Biology and Bioinformatics instructed by Nathaniel Woodward and taken at the University of Texas at Austin.
 NumPy Load the dataset faithful. Import numpy and use functions from it to compute the mean, median, and variance for each variable. Compute the correlation between the two variables using corrcoef.
 import csv eruptions = [] waiting = [] with open(&amp;#39;.</description>
+    </item>
+    
+    <item>
+      <title>Resume</title>
+      <link>/resume/</link>
+      <pubDate>Sun, 15 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/resume/</guid>
+      <description>Resume Here&#39;s my resume:
+ Resume  </description>
     </item>
     
     <item>
