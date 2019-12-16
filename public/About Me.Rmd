@@ -1,0 +1,101 @@
+---
+title: "About"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Brenna Briles is a 22 year old graduating senior at the University of Texas at Austin. She was born in College Station, Texas and moved to Austin for college. She is pursuing a Bachelor of Science and Arts in Biology with minors in Sociology and Women and Gender Studies. After graduation, she will be attending medical school in the fall of 2020. She will be the first person in her family to earn a professional degree and to become a physician. Brenna loves working with children and had the opportunity to teach children about the environment as an animal handler. During her undergraduate experience, she participated in clinical research on pediatric traumatic brain injury, was a Child Life volunteer at Dell Children's Medical Center, and volunteered at the Central Texas Food Bank. Serving as a Child Life volunteer was her favorite activity since she had the opportunity to relieve some of the stress of living in a hospital for children with chronic illnesses. In her free time, she enjoys hiking, swimming, and seeing the natural sites abundant in Austin.  
+
+#Education
+
+The University of Texas at Austin  
+Austin, Texas  
+Graduating Fall 2019  
+
+The University of Texas at Arlington  
+Arlington, Texas  
+Fall 2016-Spring 2017  
+
+A&M Consolidated High School  
+College Station, Texas  
+Graduated May 2016  
+
+#Work Experience  
+Allergies and Asthma Clinic  
+June 2019-Present  
+*Medical Assistant*  
+
+* Administered immunotherapy injections and allergy skin tests  
+* Corresponded with insurance companies to confirm benefits  
+* Monitored patients for allergic reactions  
+
+Tiny Tails to You  
+April 2018 – May 2019  
+*Animal Handler and Trainer*  
+
+* Supervised and ensured safety over 13 animals and 8 children per rotation  
+* Provided animal education to children and adults  
+* Trained new employees on animal safety and handling through shadowing at events  
+
+Science Mill
+June 2018 – August 2018
+*STEM Camp Educator*  
+
+* Instructed and engaged with 30 children per week in science-oriented activities  
+* Encouraged creativity and imagination through hands-on experiments  
+* Provided a free STEM summer camp for underfunded schools  
+* Organized, restocked, and maintained inventory of camp materials  
+
+#Activities and Interests  
+Osier Laboratory  
+April 2018 – Present  
+*Clinical Researcher*  
+
+* Volunteered at least 5 hours per week  
+* Consented patients into Traumatic Brain Injury study according to IRB informed consent protocol  
+* Utilized the Electronic Health Record to identify research participants  
+* Completed HIPAA and good clinical practice trainings  
+
+Dell Children’s Medical Center  
+August 2017 – Present  
+*Child Life and Emergency Department Volunteer*  
+
+* Volunteered at least four hours per week  
+* Collaborated with clinical staff regarding patient care  
+* Assisted in patient check-in  
+* Visited at least 10 patient rooms per shift to offer toys and therapeutic play to patients  
+
+Central Texas Food Bank  
+January 2019 – Present  
+*Warehouse Volunteer*  
+
+* Volunteered at least 2 hours per week  
+* Packaged food for distribution in central Texas  
+* Worked cooperatively with volunteers to prepare 4,000 meals per 2 hours  
+
+Inter-Cooperative Council Austin  
+January 2018 – December 2018  
+*Elected Board Representative*  
+
+* Attended board meetings twice a month  
+* Approved budgets and policies  
+* Collaborated with 15 peer board members to provide organizational oversight  
+
+#Skills  
+
+* Electronic medical record (EMR) systems: screened electronic health records to identify and enroll patients with traumatic brain injury  
+* RStudio: proficient in ggplot and dplyr  
+* Customer service: recieved excellent reviews from customers at a small animal petting zoo  
+
+#Honors and Achievements  
+College Scholar  
+May 2019  
+The University of Texas at Austin  
+
+* Academic award recieved for placement in the top 20% of class based on GPA  
+
+#Contact  
+brennabriles@gmail.com
