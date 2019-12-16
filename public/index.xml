@@ -42,6 +42,24 @@ import csv eruptions = [] waiting = [] with open(&amp;#39;.</description>
     </item>
     
     <item>
+      <title>Modeling, Testing, and Predicting</title>
+      <link>/project2/</link>
+      <pubDate>Tue, 26 Nov 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/project2/</guid>
+      <description>Introduction The CPS85 dataset contains information relating wage in US dollars, number of years of education (edu), across categories of race, sex, Hispanic ethnicity, marriage status, years of work experience (exper), worker union membership (union), age, region of residence (south), and work sector. This data was gathered from the Current Population Survey in 1985. I chose this dataset because I am interested to see what relationships arise between education, race, and sex as well as relationships between wages, marriage, and union memberships.</description>
+    </item>
+    
+    <item>
+      <title>Data Wrangling and Exploration</title>
+      <link>/project1/</link>
+      <pubDate>Sun, 20 Oct 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/project1/</guid>
+      <description>Introduction The “follicle” dataset contains information regarding follicle formation in women of varying ages. It includes variables “Age” which is the age of the woman at the time of follicle counting, “Count” which is the number of follicles in the ovaries, and “Source” which is the source of the data. The “Pima.te” dataset contains information gathered from a population of women of Pima Indian descent. It contians variables “npreg” for number of pregnancies, “glu” for plasma glucose concentration in an oral glucose tolerance test, “bp” for diastolic blood pressure in mmHg, “skin” for skin fold thickness in millimeters, “bmi” for body mass index, “ped” for diabetes pedigree function, “age” for age in years, and “type” for diabetic status (yes or no).</description>
+    </item>
+    
+    <item>
       <title>Projects</title>
       <link>/projects/</link>
       <pubDate>Sun, 02 Oct 2016 22:55:05 -0400</pubDate>
@@ -51,24 +69,6 @@ import csv eruptions = [] waiting = [] with open(&amp;#39;.</description>
   Project 1
   Project 2
   </description>
-    </item>
-    
-    <item>
-      <title>Data Wrangling and Exploration</title>
-      <link>/project1/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>/project1/</guid>
-      <description>Introduction The “follicle” dataset contains information regarding follicle formation in women of varying ages. It includes variables “Age” which is the age of the woman at the time of follicle counting, “Count” which is the number of follicles in the ovaries, and “Source” which is the source of the data. The “Pima.te” dataset contains information gathered from a population of women of Pima Indian descent. It contians variables “npreg” for number of pregnancies, “glu” for plasma glucose concentration in an oral glucose tolerance test, “bp” for diastolic blood pressure in mmHg, “skin” for skin fold thickness in millimeters, “bmi” for body mass index, “ped” for diabetes pedigree function, “age” for age in years, and “type” for diabetic status (yes or no).</description>
-    </item>
-    
-    <item>
-      <title>Modeling, Testing, and Predicting</title>
-      <link>/project2/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>/project2/</guid>
-      <description>Introduction The CPS85 dataset contains information relating wage in US dollars, number of years of education (edu), across categories of race, sex, Hispanic ethnicity, marriage status, years of work experience (exper), worker union membership (union), age, region of residence (south), and work sector. This data was gathered from the Current Population Survey in 1985. I chose this dataset because I am interested to see what relationships arise between education, race, and sex as well as relationships between wages, marriage, and union memberships.</description>
     </item>
     
   </channel>

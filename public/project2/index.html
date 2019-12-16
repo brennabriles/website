@@ -61,7 +61,7 @@
         </div>
         <div class="blog-title">
           <h4>
-          January 1, 0001
+          November 26, 2019
             &nbsp;&nbsp;
             
           </h4>
@@ -138,7 +138,7 @@ CPS85%&gt;%group_by(union)%&gt;%summarize(means=mean(wage))%&gt;%summarize(`mean
 ##          &lt;dbl&gt;
 ## 1         2.16</code></pre>
 <pre class="r"><code>mean(randdist&gt;2.162897)*2</code></pre>
-<pre><code>## [1] 0</code></pre>
+<pre><code>## [1] 4e-04</code></pre>
 <pre class="r"><code>hist(randdist, main = &quot;Null Distribution&quot;, xlab=&quot;Random Distribution Mean Difference&quot;); abline(v=2.162897, col=&quot;red&quot;)</code></pre>
 <p><img src="/Project2_files/figure-html/unnamed-chunk-2-1.png" width="768" style="display: block; margin: auto;" /></p>
 </div>
@@ -266,14 +266,14 @@ summary(mainfit) </code></pre>
 sampdist%&gt;%t%&gt;%as.data.frame%&gt;%summarise_all(sd) </code></pre>
 <pre><code>## (Intercept) experc sectorconst sectormanag sectormanuf
 sectorother sectorprof sectorsales
-## 1 0.2680306 0.02190799 0.7488399 1.077377 0.5773624
-0.6760003 0.6303497 0.6726547
+## 1 0.2669633 0.02165198 0.7543998 1.07663 0.5577508
+0.6643694 0.6307602 0.6793642
 ## sectorservice experc:sectorconst experc:sectormanag
 experc:sectormanuf experc:sectorother
-## 1 0.5130373 0.0627513 0.1107962 0.03882898 0.05706845
+## 1 0.5035843 0.0627671 0.1122371 0.03781907 0.05657452
 ## experc:sectorprof experc:sectorsales
 experc:sectorservice
-## 1 0.06393807 0.05678183 0.0349463</code></pre>
+## 1 0.06245956 0.05594304 0.0346736</code></pre>
 </div>
 <div id="logistic-regression-models" class="section level1">
 <h1>Logistic Regression Models</h1>
