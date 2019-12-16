@@ -1,0 +1,241 @@
+---
+title: 'Modeling, Testing, and Predicting'
+author: "Brenna Briles"
+date: "11/26/2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+hook_output = knit_hooks$get('output')
+knit_hooks$set(output = function(x, options) {
+  # this hook is used only when the linewidth option is not NULL
+  if (!is.null(n <- options$linewidth)) {
+    x = knitr:::split_lines(x)
+    # any lines wider than n should be wrapped
+    if (any(nchar(x) > n)) x = strwrap(x, width = n)
+    x = paste(x, collapse = '\n')
+  }
+  hook_output(x, options)
+})
+
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE,fig.align="center",warning=FALSE,message=FALSE,fig.width=8, fig.height=5, linewidth=60)
+options(tibble.width = 100,width = 100)
+library(tidyverse)
+```
+#Introduction  
+The CPS85 dataset contains information relating wage in US dollars, number of years of education (edu), across categories of race, sex, Hispanic ethnicity, marriage status, years of work experience (exper), worker union membership (union), age, region of residence (south), and work sector. This data was gathered from the Current Population Survey in 1985. I chose this dataset because I am interested to see what relationships arise between education, race, and sex as well as relationships between wages, marriage, and union memberships.  
+
+#Multivariate Analysis of Variance Testing  
+
+A one-way MANOVA was conducted to determine the effect of sex on number of years of education and wage earning. Significant differences were found between the sexes on education and wage (p<0.00001). Subsequently, univariate analyses of variance (ANOVAs) were peformed for education and wage. Bonferroni correction was used to control overall Type I error. The probability of Type I error without adjustment would be 14.2625%. Since there were three tests performed (one MANOVA and two ANOVAs), the new alpha value is 0.017. The univariate ANOVA for wage was significant (F=23.426, p<0.0001) but not for education (F=0.0022, p>0.05). Therefore, the mean wage is significantly different between males and females. Post-hoc analysis not necessary since there are only two groups in the sex variable. If there were more than two groups in the ANOVA test, post-hoc analysis would have been performed to determine which group means differ.  
+
+Random sampling and independent observations can be assumed to be met. By plotting the explanatory variables against one another as shown, it is likely that the assumption of multivariate normality is not met but the assumption of linearity is met. There seems to be several multivariate outliers in the "Assumption of Linearity" plot, so this assumption is likely not met. The assumption of no multicollinearity can be met from this plot as well. Comparing covariances between the male and female group shows that the assumption of homogeneous covariances is likely to have been met.  
+
+```{R, echo=T}
+library(mosaicData)
+man<-manova(cbind(wage, educ)~sex, data=CPS85)
+summary(man)
+summary.aov(man)
+1-(1-0.05)^3
+0.05/3
+ggplot(CPS85, aes(x=wage, y=educ))+geom_point(aes(color=sex))+ggtitle("Assumption of Linearity")
+ggplot(CPS85, aes(x=wage, y=educ))+geom_point(alpha=.5)+geom_density_2d(h=2)+coord_fixed()+
+  facet_wrap(~sex)+ggtitle("Multivariate Normality")
+covmats<-CPS85%>%group_by(sex)%>%do(covs=cov(.[1:2]))
+for (i in 1:2) {print(covmats$covs[i])}
+```
+#Randomization Testing  
+
+A permutation test with 5000 permutations was conducted to determine if wage differed by participation in unions. The null hypothesis is that the mean wage is not significantly different between union and non-union workers. The alternative hypothesis is that the mean wage is different for union and non-union workers. By comparing the random distribution with the mean difference of the actual dataset, it is concluded that there is a significant difference in mean wage between union and non-union workers (p=0.0004).	The null distribution of the randomization test is shown, with the test statistic at the acutal mean difference of $2.162897.  
+
+```{R, echo=T}
+randdist<-vector()
+for (i in 1:5000) {
+new<-data.frame(wage=sample(CPS85$wage), union=CPS85$union)  
+randdist[i]<-mean(new[new$union=="Union",]$wage)-
+  mean(new[new$union=="Not",]$wage)
+}
+CPS85%>%group_by(union)%>%summarize(means=mean(wage))%>%summarize(`mean_diff:`=diff(means))
+mean(randdist>2.162897)*2
+hist(randdist, main = "Null Distribution", xlab="Random Distribution Mean Difference"); abline(v=2.162897, col="red")
+```
+
+#Linear Regression Models  
+
+A linear regression model predicting wage from years of work experience and work sector, including interaction, was created using mean centered wage and work experience. The coefficient estimates from the model showed positive main effects of years of work experience and work sector on wage. Controlling for sector, one year of increase in work experience overall results in a $0.05 increase in wage. Wage increases by $1.50 for every one year increase in work experience for construction sector workers, $5.25 for management, $0.58 for manufacturing, $1.28 for other, $4.65 for professionals, $0.07 for sales, and decreases by $0.90 for service industry workers. For construction workers, wage is increased by 0.091141 times the number of years of experience, 0.002580 times experience for management, 0.030620 times experience for other, 0.002399 times experience for professionals, 0.079792 times experience for sales. For service workers, wage is decreased by 0.056461 times years of experience and 0.053097  times experience for manufacturers.  The adjusted R^2 value indicates that the predictor variables explain 18.64% of the variation in wage. A plot of this model is shown.  
+
+```{R, echo=T}
+CPS85$experc<-CPS85$exper-mean(CPS85$exper, na.rm = T)
+CPS85$wagec<-CPS85$wage-mean(CPS85$wage, na.rm = T)
+fit<-lm(wagec~experc*sector, data=CPS85)
+summary(fit)
+CPS85%>%ggplot(aes(x=experc, y=wagec, group=sector))+geom_point(aes(color=sector))+geom_smooth(method="lm", formula = y~1, se=F, fullrange=T, aes(color=sector))+theme(legend.position = c(.9, .65))+xlab("Years Experience")+ylab("Wage ($)")+ggtitle("Predicting Wage from Sector and Experience")
+```
+
+A scatterplot of residuals versus fitted values from the linear regression model shows that the assumptions of linearity and heteroskedasticity are met. A Breusch-Pagan test was also conducted to determine if the assumption of heteroskedasticity is met. The test was significant (p<0.05), so the null hypothesis of homoskedasticity is rejected and the assumption of heteroskedasticity is met. A Shapiro-Wilk normality test was conducted to determine if the assumption of normality is met. The test was significant (p<0.05), so the null hypothesis of normality is rejected and the assumption of normality is not met. Since the assumption of normality is not met, robust standard errors are used. With robust standard errors, there are significant effects of years of work experience, managment sector, and professional sector on wage (p<0.05). This differs from the previous model where years of experience was not significant. Standard error values are also smaller when using robust standard errors than in the orignal model.  
+
+```{R, echo=T}
+resids<-fit$residuals
+fitvals<-fit$fitted.values
+ggplot()+geom_point(aes(fitvals, resids))+geom_hline(yintercept = 0, color="red")
+shapiro.test(resids)
+library(sandwich)
+library(lmtest)
+bptest(fit) 
+coeftest(fit, vcov=vcovHC(fit))
+```
+
+After re-running the regression model without interaction, the same variables are significant as in the robust stanard errors model: years of work experience, management sector, and professonal sector. This also differs from the interaction model in that it includes years of work experience as a significant variable in explaining variation in wage. This model also has a marginally smaller adjusted R^2 value: the predictor variables without interaction explain 18.56% of the variation in wage.  
+
+```{R, echo=T}
+mainfit<-lm(wagec~experc+sector, data=CPS85)
+summary(mainfit) 
+```
+
+Re-running the interaction model with bootstrapped standard errors shows that, in general, bootstrapped standard errors are less than the those of the model using robust standard errors. The same holds when comparing bootstrapped standard errors with those of the original model.  
+
+```{R, echo=T}
+sampdist<-replicate(5000, {
+  bootdata<-CPS85[sample(nrow(CPS85), replace=TRUE),]
+  fit3<-lm(wagec~experc*sector, data=bootdata)
+  coef(fit3)
+})
+sampdist%>%t%>%as.data.frame%>%summarise_all(sd) 
+```
+#Logistic Regression Models  
+
+A univariate binary logistic regression model was performed to test the contributions of wage and sex in predicting participation in labor unions. Coefficient estimates from the model show that controlling for wage, being male, and controlling for sex, increased wage, increase the probability of participation in a labor union since they are both positive. Exponentiated coefficient estimates from the model show that a female that makes $0 in wage has an odds of  0.07769047 (intercept) of particpating in a labor union. Controlling for wage, males have an odds 2.11431008 (sexM) times that of the odds of females of participating in a labor union. For every $1 increase in wage, odds of participating in a labor union increases by a factor of 1.06207705 (wage). All of these estimates were significant (p<0.01).  
+
+
+```{R, echo=T}
+fit4<-glm(union~sex+wage, data=CPS85, family = binomial(link = "logit"))
+coeftest(fit4)
+exp(coef(fit4))
+```
+
+Classification diagnostics were calculated using the class_diag() function and confusion matrix. The model has an accuracy of 0.8183521. The model is extremely specific with a specificity of 0.9977169, meaning that the model is good at predicting when a worker is not in a labor union. However, the sensitivity of the model is zero which means the model does a very poor job of predicting when a worker does particpate in a labor union. The recall of the model is also zero since there were no workers classified as union members in the model. The figure "Comparing Log Odds by Union Participation" shows the portion of cases that were misclassified by the model in the overlapping, gray portion of the curve. The AUC for this model is 0.6757396 which means the model is predicting participation in unions poorly. Therefore, it is difficult to predict participation in a labor union based sex and wage alone.  
+
+```{R, echo=T}
+prob<-predict(fit4, type="response")
+table(predict=as.numeric(prob>0.5), truth=CPS85$union)%>%addmargins
+
+logit<-predict(fit4) #get predicted log-odds
+outcome<-factor(CPS85$union,levels=c("Union","Not"))
+ggplot(CPS85,aes(logit, fill=outcome))+geom_density(alpha=.3)+
+  geom_vline(xintercept=0,lty=2)+ggtitle("Comparing Log Odds by Union Participation")
+
+class_diag<-function(probs,truth){
+  
+  tab<-table(factor(probs>.5,levels=c("FALSE","TRUE")),truth)
+  acc=sum(diag(tab))/sum(tab)
+  sens=tab[2,2]/colSums(tab)[2]
+  spec=tab[1,1]/colSums(tab)[1]
+  ppv=tab[2,2]/rowSums(tab)[2]
+
+  if(is.numeric(truth)==FALSE & is.logical(truth)==FALSE) truth<-as.numeric(truth)-1
+  
+  ord<-order(probs, decreasing=TRUE)
+  probs <- probs[ord]; truth <- truth[ord]
+  
+  TPR=cumsum(truth)/max(1,sum(truth)) 
+  FPR=cumsum(!truth)/max(1,sum(!truth))
+  
+  dup<-c(probs[-1]>=probs[-length(probs)], FALSE)
+  TPR<-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1)
+  
+  n <- length(TPR)
+  auc<- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+
+  data.frame(acc,sens,spec,ppv,auc)
+}
+class_diag(prob, CPS85$union) 
+library(plotROC)
+ggplot(CPS85)+geom_roc(aes(d=union, m=prob), n.cuts = 0)+ggtitle("ROC Plot")
+```
+
+A ten fold cross validation performd on the logistic regression model showed an out of sample accuracy and AUC value that were much less than the in sample values: 0.1254368 and 0.5287863, respectively. Since the model performed much worse on the tested dataset, it was likely overfitting to the training dataset and subsequently does not predict well out of sample. The out of sample sensitivity and specificity are almost the same as the within sample: 0 and 1, respectively. Recall was not available for this model since sensitivity was zero.  
+
+```{R, echo=T}
+set.seed(1234)
+k=10
+
+data1<-CPS85[sample(nrow(CPS85)),]
+folds<-cut(seq(1:nrow(CPS85)),breaks=k,labels=F)
+
+diags<-NULL
+for(i in 1:k){
+  train<-data1[folds!=i,]
+  test<-data1[folds==i,]
+  truth<-test$r
+  
+  fit5<-glm(union~sex+wage, data=train, family = binomial(link = "logit"))
+  probs<-predict(fit5,newdata = test,type="response")
+  
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+
+apply(diags,2,mean)
+```
+#LASSO Regression  
+
+A univariate binary logistic regression was performed to test the contribution of wage, sex, race, sector, union participation, years of education, ethnicity, region of residence, years of work experience, and age in predicting marriage status. A 10 fold cross validation was performed on this model to determine out of sample classification diagnostics. The out of sample AUC, PPV, accuracy, sensitivy, and specificity were 0.4180350 , 0.7812052, 0.2265199, 0.1539623, and 0.7173016, respectively. A LASSO regression was performed to determine which of these predictors was most important in predicting marriage status. The LASSO regression showed that age is the most important predictor.  
+
+```{R, echo=T}
+#library(glmnet)
+set.seed(1234)
+k=10
+
+data1<-CPS85[sample(nrow(CPS85)),]
+folds<-cut(seq(1:nrow(CPS85)),breaks=k,labels=F)
+
+diags<-NULL
+for(i in 1:k){
+  train<-data1[folds!=i,]
+  test<-data1[folds==i,]
+  truth<-test$r
+  
+  fit6<-glm(married~wage+sex+race+sector+union+educ+hispanic+south+exper+age, data = train, family = binomial(link="logit"))
+  probs<-predict(fit6,newdata = test,type="response")
+  
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+
+apply(diags,2,mean)
+
+fit6<-glm(married~-1+wage+sex+race+sector+union+educ+hispanic+south+exper+age, data = CPS85, family = "binomial")
+set.seed(1234)
+x<-model.matrix(fit6)
+x<-scale(x)
+y<-as.matrix(CPS85$married)  
+#cv<-cv.glmnet(x,y, family="binomial")
+#lasso<-glmnet(x,y,family="binomial",lambda=cv$lambda.1se)
+#coef(lasso)
+```
+
+A univariate binary logistic regression was performed predicting marriage status from solely age, and a 10 fold cross validation was conducted. The out of sample AUC, PPV, accuracy, sensitivy, and specificity were 0.5166482, 0.8810678, 0.2266247, 0.1331484, and 0.8769841, respectively. The new AUC is higher than that of the model with all predictor variables while accuracy is nearly the same. The model predicting marriage from solely age performs better than the model using all variables.  
+
+```{R, echo=T}
+set.seed(1234)
+k=10
+
+data1<-CPS85[sample(nrow(CPS85)),]
+folds<-cut(seq(1:nrow(CPS85)),breaks=k,labels=F)
+
+diags<-NULL
+for(i in 1:k){
+  train<-data1[folds!=i,]
+  test<-data1[folds==i,]
+  truth<-test$r
+  
+  fit7<-glm(married~age, data=train, family = binomial(link = "logit"))
+  probs<-predict(fit7,newdata = test,type="response")
+  
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+
+apply(diags,2,mean)
+
+```

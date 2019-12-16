@@ -1,0 +1,273 @@
+---
+title: 'Data Wrangling and Exploration'
+author: "Brenna Briles"
+date: "10/20/2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p><font size="3"> The “follicle” dataset contains information regarding follicle formation in women of varying ages. It includes variables “Age” which is the age of the woman at the time of follicle counting, “Count” which is the number of follicles in the ovaries, and “Source” which is the source of the data. The “Pima.te” dataset contains information gathered from a population of women of Pima Indian descent. It contians variables “npreg” for number of pregnancies, “glu” for plasma glucose concentration in an oral glucose tolerance test, “bp” for diastolic blood pressure in mmHg, “skin” for skin fold thickness in millimeters, “bmi” for body mass index, “ped” for diabetes pedigree function, “age” for age in years, and “type” for diabetic status (yes or no). The diabetes pedigree function is a score of a person’s liklihood of diabetes based on family history. These data sets are interesting to me because I hope to go into the field of obstetrics and gynecology in my future career. I am interested to see how follicle count will compare across women with and without diabetes because diabetes has been studied as a contributor to infertility. I’m also interested to see how follicle counts vary by BMI, as it is another factor known to influence fertility.</font></p>
+</div>
+<div id="tidying-and-joining" class="section level1">
+<h1>Tidying and Joining</h1>
+<p><font size="3">The two datasets are tidy in their original form. I will join the datasets using inner_join() because I want each blood pressure and BMI measurement in the Pima.te dataset to have an associated follicle count and am not interested in retaining cases that do not have these associated values. The inner join will drop any values that do not have a match in the other dataset. Eighty eight cases are lost from Pima.te, and 27 cases are lost from follicle. The missing cases were found using anit_join() to see the cases in follicle that did not have a match in Pima.te and vice versa. Of the cases that were lost from Pima.te, 72 were non-diabetic while 14 were diabetic. This could cause a potential problem when looking at relationships across the two categories since the number of cases in each category is skewed.</font></p>
+<pre class="r"><code>library(dplyr)
+library(MASS)
+library(sm)
+Pimfol &lt;- inner_join(Pima.te, follicle, by = c(age = &quot;Age&quot;))
+missing &lt;- anti_join(follicle, Pima.te, by = c(Age = &quot;age&quot;))
+missing2 &lt;- missing &lt;- anti_join(Pima.te, follicle, by = c(age = &quot;Age&quot;))
+table(missing2$type)</code></pre>
+<pre><code>## 
+##  No Yes 
+##  72  14</code></pre>
+</div>
+<div id="data-wrangling-and-visualization" class="section level1">
+<h1>Data Wrangling and Visualization</h1>
+<p><font size="3">To begin analyzing the joined dataset, I will first remove “source” using select() because I’m not interested in analyzing the source of the follicle data. I will employ summarize() to get the mean, standard deviation, minimum, and maximum for number of pregnancies, glucose level, bmi, and follicle count. This function creates a wide data set, so I will tidy it using pivot_longer() to bring the column names into rows, separate() to create columns of the statistics and variables, and finally pivot_wider() to create colums of Mean, Sd, Min, and Max with their corresponding values.</font></p>
+<pre class="r"><code>Pimfol1 &lt;- Pimfol %&gt;% dplyr::select(-Source)
+stats &lt;- Pimfol1 %&gt;% summarize(Mean.Preg = mean(npreg), Mean.Glu = mean(glu), 
+    Mean.Bmi = mean(bmi), Mean.Count = mean(Count), Sd.Preg = sd(npreg), Sd.Glu = sd(glu), 
+    Sd.Bmi = sd(bmi), Sd.Count = sd(Count), Min.Preg = min(npreg), Min.Glu = min(glu), 
+    Min.Bmi = min(bmi), Min.Count = min(Count), Max.Preg = max(npreg), Max.Glu = max(glu), 
+    Max.Bmi = max(bmi), Max.Count = max(Count))
+
+library(tidyr)
+tidystats &lt;- stats %&gt;% pivot_longer(contains(&quot;.&quot;)) %&gt;% separate(name, into = c(&quot;stat&quot;, 
+    &quot;variable&quot;)) %&gt;% pivot_wider(names_from = &quot;stat&quot;, values_from = &quot;value&quot;)
+print(tidystats)</code></pre>
+<pre><code>## # A tibble: 4 x 5
+##   variable     Mean       Sd   Min      Max
+##   &lt;chr&gt;       &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
+## 1 Preg         5.02     3.99   0       17  
+## 2 Glu        120.      30.4   65      197  
+## 3 Bmi         34.0      7.06  19.5     67.1
+## 4 Count    62431.   65770.   316   237200</code></pre>
+<p><font size="3">Now, I want to see how these statistics compare between women with and without diabetes. I will use group_by(type) to separate the cases into diabetic and non-diabetic (yes means diabetic).I will tidy the resulting statistics table the same way as before. I will use arrange() to place the same variables of the two groups next to each other so they can be easily compared. I will also use group_by() along with filter() to determine that maximum number of pregnancies within the diabetic and non-diabetic groups.</font></p>
+<pre class="r"><code>stats2 &lt;- Pimfol1 %&gt;% group_by(type) %&gt;% summarize(Mean.Preg = mean(npreg), 
+    Mean.Glu = mean(glu), Mean.Bmi = mean(bmi), Mean.Count = mean(Count), Sd.Preg = sd(npreg), 
+    Sd.Glu = sd(glu), Sd.Bmi = sd(bmi), Sd.Count = sd(Count), Min.Preg = min(npreg), 
+    Min.Glu = min(glu), Min.Bmi = min(bmi), Min.Count = min(Count), Max.Preg = max(npreg), 
+    Max.Glu = max(glu), Max.Bmi = max(bmi), Max.Count = max(Count))
+
+tidystats2 &lt;- stats2 %&gt;% pivot_longer(contains(&quot;.&quot;)) %&gt;% separate(name, into = c(&quot;stat&quot;, 
+    &quot;variable&quot;)) %&gt;% pivot_wider(names_from = &quot;stat&quot;, values_from = &quot;value&quot;) %&gt;% 
+    arrange(variable)
+print(tidystats2)</code></pre>
+<pre><code>## # A tibble: 8 x 6
+##   type  variable     Mean       Sd   Min      Max
+##   &lt;fct&gt; &lt;chr&gt;       &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
+## 1 No    Bmi         32.0      6.11  19.5     52.3
+## 2 Yes   Bmi         36.3      7.39  25.5     67.1
+## 3 No    Count    74528.   69570.   316   237200  
+## 4 Yes   Count    48146.   57919.   316   237200  
+## 5 No    Glu        107.      23.2   65      197  
+## 6 Yes   Glu        136.      30.0   78      196  
+## 7 No    Preg         4.24     3.35   0       13  
+## 8 Yes   Preg         5.94     4.47   0       17</code></pre>
+<pre class="r"><code>Pimfol1 %&gt;% group_by(type) %&gt;% filter(npreg == max(npreg))</code></pre>
+<pre><code>## # A tibble: 14 x 9
+## # Groups:   type [2]
+##    npreg   glu    bp  skin   bmi   ped   age type  Count
+##    &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt; &lt;fct&gt; &lt;int&gt;
+##  1    13   106    72    54  36.6 0.178    45 No     7350
+##  2    13   106    72    54  36.6 0.178    45 No    13145
+##  3    13   106    72    54  36.6 0.178    45 No     3115
+##  4    13   106    72    54  36.6 0.178    45 No     6735
+##  5    13   106    72    54  36.6 0.178    45 No    43068
+##  6    13   106    72    54  36.6 0.178    45 No     3490
+##  7    13   106    72    54  36.6 0.178    45 No     4820
+##  8    17   163    72    41  40.9 0.817    47 Yes    2693
+##  9    17   163    72    41  40.9 0.817    47 Yes   10495
+## 10    17   163    72    41  40.9 0.817    47 Yes    4835
+## 11    17   163    72    41  40.9 0.817    47 Yes    5695
+## 12    17   163    72    41  40.9 0.817    47 Yes    6776
+## 13    17   163    72    41  40.9 0.817    47 Yes     368
+## 14    13   153    88    37  40.6 1.17     39 No    53825</code></pre>
+<p><font size="3">The maximum number of pregnancies in the non-diabetic group was 13 and 17 in the diabetic group. This was a surprisng result, since I was expected diabetes to negatively affect number of pregnancies. The mean, minimum, and maximum glucose level and BMI are noticeably higher in the diabetic group. I will use ggplot() to create a table visualizing the relationship between these variables by diabetic status. The colors of the points will represent skin fold thickness since it was not included in the summary statistics, and I would like to see how it compares to bmi.</font></p>
+<pre class="r"><code>ggplot(data = Pimfol1, aes(x = glu, y = bmi, color = skin)) + geom_point() + 
+    facet_wrap(~type) + scale_x_continuous(breaks = seq(0, 200, 25)) + ggtitle(&quot;Plasma Glucose Level and BMI in Diabetic and Non-Diabetic Women&quot;)</code></pre>
+<p><img src="/Project1_files/figure-html/unnamed-chunk-5-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><font size="3">These plots show a only a slightly positive relationship between BMI and glucose level, but I was expecting a more pronounced trend. The skin fold thickness trends are different across the two categories. For the non-diabetics, skin fold thickness is the least at smaller values of BMI and glucose, with most higher values of glucose level having higher skin fold thickness values. However, for the diabetic category, there are low values of skin fold thickness across the entire range of glucose values. This is surprsing, as I was expecting them to have the same skin fold thickness vs glucose relationship.</font></p>
+<p><font size="3">I’d like to see what patterns exist when the follicle count is divided by the age of the woman. I will use mutate() to create this new variable, Rate, and arrange in order of descinding rate. The result shows that women of greater age have a smaller rate. I will visualize this trend using ggplot(). I will color the points by number of pregnancies. </font></p>
+<pre class="r"><code>Pimfol1 %&gt;% mutate(Rate = Count/age) %&gt;% arrange(Rate) %&gt;% glimpse()</code></pre>
+<pre><code>## Observations: 639
+## Variables: 10
+## $ npreg &lt;int&gt; 9, 8, 6, 17, 10, 10, 7, 9, 11, 9, 6, 8, 12, 12, 7, 9, 11, …
+## $ glu   &lt;int&gt; 184, 126, 165, 163, 161, 68, 106, 120, 120, 102, 134, 118,…
+## $ bp    &lt;int&gt; 85, 88, 68, 72, 68, 106, 92, 72, 80, 76, 80, 72, 72, 84, 9…
+## $ skin  &lt;int&gt; 15, 36, 26, 41, 23, 23, 18, 22, 37, 37, 37, 19, 31, 33, 18…
+## $ bmi   &lt;dbl&gt; 30.0, 38.5, 33.6, 40.9, 25.5, 35.5, 22.7, 20.8, 42.3, 32.9…
+## $ ped   &lt;dbl&gt; 1.213, 0.349, 0.631, 0.817, 0.326, 0.285, 0.235, 0.733, 0.…
+## $ age   &lt;int&gt; 49, 49, 49, 47, 47, 47, 48, 48, 48, 46, 46, 46, 46, 46, 48…
+## $ type  &lt;fct&gt; Yes, No, No, Yes, Yes, No, No, No, Yes, Yes, Yes, No, Yes,…
+## $ Count &lt;int&gt; 316, 316, 316, 368, 368, 368, 538, 538, 538, 692, 692, 692…
+## $ Rate  &lt;dbl&gt; 6.448980, 6.448980, 6.448980, 7.829787, 7.829787, 7.829787…</code></pre>
+<pre class="r"><code>Pimfol1 %&gt;% ggplot(aes(x = age, y = Count, color = npreg)) + geom_point(size = 4) + 
+    facet_wrap(~type) + ggtitle(&quot;Comparing Ovarian Follicle Abundance and Age&quot;) + 
+    theme_bw() + scale_color_gradient(low = &quot;blue&quot;, high = &quot;red&quot;)</code></pre>
+<p><img src="/Project1_files/figure-html/unnamed-chunk-6-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><font size="3">Again, follicle counts become very low when the maximum age is reached. This trend is interesting because it visualizes the effects of menopause, the period in which the ovaries cease production of estrogen and progesterone and subsequently no longer produce follicles. Ths pattern holds for diabetic and non-diabetic women. Since women of older ages have more time to have children, the relationship between follicle count and number of pregancies needs to be analyzed among women of the same age. There is not a clear relationship between follicle count and number of pregnancies when analyzed this way. If the relationship I expected was visualized, we would see a clear gradient from red at high follicle counts to blue at low follicle counts at each age.</font></p>
+</div>
+<div id="dimensionality-reduction" class="section level1">
+<h1>Dimensionality Reduction</h1>
+<p><font size="3">To generate a summary of variance in the dataset, I will preform a Principle Component Analysis. This will require scaling the data and turning it into a data frame. To include type in the analysis, it will be transformed to a numeric variable using mutate_if(). PCA analysis will show the relationships in my data set’s variance in the form of principle components. To generate eigenvalues, I will use eigen() on the correlation matrix of the numeric values of the dataset. I will keep the first three principle components, following Kaiser’s rule, because their eigenvalues are greater than one.</font></p>
+<pre class="r"><code>library(dplyr)
+Pimfolnums &lt;- Pimfol1 %&gt;% mutate_if(is.factor, as.numeric) %&gt;% scale()
+pca &lt;- princomp(Pimfolnums)
+summary(pca, loadings = T)</code></pre>
+<pre><code>## Importance of components:
+##                           Comp.1    Comp.2    Comp.3     Comp.4     Comp.5
+## Standard deviation     1.6479579 1.4064148 1.1101411 0.91738365 0.87613577
+## Proportion of Variance 0.3022247 0.2201225 0.1371494 0.09365687 0.08542412
+## Cumulative Proportion  0.3022247 0.5223472 0.6594967 0.75315354 0.83857766
+##                            Comp.6     Comp.7     Comp.8     Comp.9
+## Standard deviation     0.70363599 0.69254751 0.55333688 0.41184968
+## Proportion of Variance 0.05509774 0.05337487 0.03407351 0.01887622
+## Cumulative Proportion  0.89367540 0.94705026 0.98112378 1.00000000
+## 
+## Loadings:
+##       Comp.1 Comp.2 Comp.3 Comp.4 Comp.5 Comp.6 Comp.7 Comp.8 Comp.9
+## npreg -0.439  0.296               -0.294  0.446 -0.435         0.487
+## glu   -0.229 -0.348 -0.475 -0.352         0.491  0.470              
+## bp    -0.332         0.301 -0.186  0.827  0.167        -0.197  0.105
+## skin  -0.221 -0.466  0.351  0.332 -0.302  0.148        -0.568 -0.253
+## bmi   -0.227 -0.516  0.351  0.113        -0.181         0.687  0.198
+## ped          -0.206 -0.571  0.694  0.340        -0.173              
+## age   -0.490  0.333                                     0.302 -0.741
+## type  -0.346 -0.266 -0.329 -0.422        -0.525 -0.448 -0.201       
+## Count  0.429 -0.284        -0.210         0.447 -0.597  0.169 -0.313</code></pre>
+<pre class="r"><code>eigen(cor(Pimfolnums))</code></pre>
+<pre><code>## $values
+## [1] 2.7200221 1.9811029 1.2343450 0.8429119 0.7688171 0.4958796 0.4803738
+## [8] 0.3066616 0.1698860
+## 
+## $vectors
+##              [,1]        [,2]         [,3]        [,4]         [,5]
+##  [1,] -0.43865106  0.29620670  0.013929882  0.08305298 -0.294351319
+##  [2,] -0.22879383 -0.34849101 -0.474815748 -0.35173296 -0.094433822
+##  [3,] -0.33244556 -0.04802492  0.301420379 -0.18646530  0.826979419
+##  [4,] -0.22127132 -0.46613629  0.351353876  0.33231966 -0.302004858
+##  [5,] -0.22680289 -0.51616052  0.350928287  0.11316955 -0.048466405
+##  [6,] -0.03139636 -0.20610919 -0.571444984  0.69397504  0.340463177
+##  [7,] -0.48969370  0.33270409 -0.005009142  0.08398510  0.001380791
+##  [8,] -0.34617048 -0.26637793 -0.328561444 -0.42245523 -0.072990310
+##  [9,]  0.42860049 -0.28403218  0.048728090 -0.21035646  0.075789192
+##              [,6]        [,7]        [,8]        [,9]
+##  [1,]  0.44604456 -0.43526345 -0.02613303  0.48684632
+##  [2,]  0.49119060  0.47021234 -0.07502302 -0.01128207
+##  [3,]  0.16665791 -0.00651552  0.19704703  0.10492953
+##  [4,]  0.14818539  0.01929318  0.56767013 -0.25314543
+##  [5,] -0.18077973  0.02042299 -0.68665958  0.19807065
+##  [6,]  0.01045499 -0.17314059 -0.03429050  0.03470673
+##  [7,]  0.03672332 -0.03791037 -0.30162369 -0.74071919
+##  [8,] -0.52503479 -0.44831225  0.20088043 -0.02149002
+##  [9,]  0.44748355 -0.59683797 -0.16912924 -0.31336444</code></pre>
+<pre class="r"><code>results &lt;- Pimfolnums %&gt;% as.data.frame %&gt;% mutate(PC1 = pca$scores[, 1], PC2 = pca$scores[, 
+    2], PC3 = pca$scores[, 3])</code></pre>
+<p><font size="3">I will use ggplot() to visualize the scores that result from the PCA. This figure shows a few clear outliers which I will identify to further conceptualize the PCA scores.</font></p>
+<pre class="r"><code>results %&gt;% ggplot(aes(PC1, PC2)) + geom_point(size = 2) + ggtitle(&quot;Principle Component Scores on PC1 and PC2&quot;)</code></pre>
+<p><img src="/Project1_files/figure-html/unnamed-chunk-8-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><font size="3">PC1 is an axis that shows the general effect of health on fertility. High scores on PC1 have better general health indicators. Further, those cases with high follicle counts have low values of all of the other variables, indicated by negative scores for all of the variables except Count. This pattern is exemplifed by comparing the highest and lowest three scores on PC1 as shown. I attached ID values to each case using mutate() to be able to identify characteristics of the cases with the highest and lowest PC scores.</font></p>
+<pre class="r"><code>PimfolID &lt;- Pimfol1 %&gt;% mutate(id = row_number())
+ID &lt;- PimfolID$id
+pca$scores %&gt;% as.data.frame %&gt;% cbind(ID, .) %&gt;% top_n(3, Comp.1)</code></pre>
+<pre><code>##    ID   Comp.1    Comp.2      Comp.3     Comp.4     Comp.5    Comp.6
+## 1  44 3.894404 0.6551739 -0.85787198 -0.5331144 -0.5107557 0.5518508
+## 2 390 3.788110 1.1873212 -0.29994438 -0.7702922  0.4891740 0.2877948
+## 3 514 3.886380 1.5854806  0.02450834 -0.8260525  0.2032113 0.1696078
+##      Comp.7      Comp.8      Comp.9
+## 1 -1.016966  0.59861307 -0.59817096
+## 2 -1.027965 -0.03714776 -0.12242978
+## 3 -1.292679 -0.15136841 -0.05643021</code></pre>
+<pre class="r"><code>pca$scores %&gt;% as.data.frame %&gt;% cbind(ID, .) %&gt;% top_n(3, wt = desc(Comp.1))</code></pre>
+<pre><code>##    ID    Comp.1     Comp.2     Comp.3    Comp.4    Comp.5   Comp.6
+## 1 122 -3.510836 -0.2940018 -0.6578731 0.4745233 -1.466576 1.071676
+## 2 124 -3.496877 -0.3032523 -0.6562861 0.4676724 -1.464108 1.086250
+## 3 127 -3.525987 -0.2839611 -0.6595956 0.4819595 -1.469255 1.055857
+##       Comp.7    Comp.8    Comp.9
+## 1 -0.6930481 0.3256054 0.6136440
+## 2 -0.7124860 0.3311137 0.6034383
+## 3 -0.6719495 0.3196266 0.6247216</code></pre>
+<pre class="r"><code>PimfolID %&gt;% filter(ID %in% c(&quot;44&quot;, &quot;390&quot;, &quot;514&quot;))</code></pre>
+<pre><code>##   npreg glu bp skin  bmi   ped age type  Count  id
+## 1     1 101 50   15 24.2 0.526  26   No 237200  44
+## 2     1  82 64   13 21.2 0.415  23   No 210100 390
+## 3     2  68 62   13 20.1 0.257  23   No 210100 514</code></pre>
+<pre class="r"><code>PimfolID %&gt;% filter(ID %in% c(&quot;122&quot;, &quot;124&quot;, &quot;127&quot;))</code></pre>
+<pre><code>##   npreg glu bp skin  bmi   ped age type Count  id
+## 1    17 163 72   41 40.9 0.817  47  Yes  2693 122
+## 2    17 163 72   41 40.9 0.817  47  Yes  4835 124
+## 3    17 163 72   41 40.9 0.817  47  Yes   368 127</code></pre>
+<p><font size="3">On PC2, all scores have positive values except for number of pregancies and age. The cases with the highest scores on PC2 are 48 years old, have had 7 pregnancies, are not diabetic, and have the same values for glucose, blood pressure, skin thickness, pedigree, and BMI. The cases with the lowest scores on PC2 are 25 years old, have had no pregnancies, are diabetic, and also have the same scores for the same variables as the three highest scores. Overall, higher scores on PC2 indicate older age, lower follicle count, no presence of diabetes, and higher numer of pregnancies. This relationship was similarly visualized in the figure comparing follicle count, age, and number of pregnancies above.</font></p>
+<pre class="r"><code>pca$scores %&gt;% as.data.frame %&gt;% cbind(ID, .) %&gt;% top_n(3, Comp.2)</code></pre>
+<pre><code>##   ID     Comp.1   Comp.2    Comp.3     Comp.4   Comp.5    Comp.6    Comp.7
+## 1 37 -0.7554839 2.835444 0.3830621 -0.5454647 1.379752 0.4620289 0.5412790
+## 2 38 -0.7632974 2.840622 0.3821737 -0.5416298 1.378371 0.4538712 0.5521595
+## 3 39 -0.7616878 2.839555 0.3823567 -0.5424198 1.378655 0.4555517 0.5499181
+##       Comp.8     Comp.9
+## 1 -0.2345480 -0.3967338
+## 2 -0.2376312 -0.3910211
+## 3 -0.2369961 -0.3921979</code></pre>
+<pre class="r"><code>pca$scores %&gt;% as.data.frame %&gt;% cbind(ID, .) %&gt;% top_n(3, wt = desc(Comp.2))</code></pre>
+<pre><code>##    ID     Comp.1    Comp.2    Comp.3   Comp.4    Comp.5       Comp.6
+## 1 385 -1.4070575 -6.134412 -1.144097 2.985848 0.6763560 -0.128620329
+## 2 387 -1.2794608 -6.218970 -1.129590 2.923224 0.6989189  0.004597954
+## 3 388 -0.6363292 -6.645171 -1.056472 2.607575 0.8126435  0.676064365
+##        Comp.7    Comp.8      Comp.9
+## 1  0.26942777 0.2177946  0.16106884
+## 2  0.09174587 0.2681452  0.06777854
+## 3 -0.80383265 0.5219302 -0.40243695</code></pre>
+<pre class="r"><code>PimfolID %&gt;% filter(ID %in% c(&quot;37&quot;, &quot;38&quot;, &quot;39&quot;))</code></pre>
+<pre><code>##   npreg glu bp skin  bmi   ped age type Count id
+## 1     7 106 92   18 22.7 0.235  48   No  1737 37
+## 2     7 106 92   18 22.7 0.235  48   No   538 38
+## 3     7 106 92   18 22.7 0.235  48   No   785 39</code></pre>
+<pre class="r"><code>PimfolID %&gt;% filter(ID %in% c(&quot;385&quot;, &quot;387&quot;, &quot;388&quot;))</code></pre>
+<pre><code>##   npreg glu bp skin  bmi  ped age type  Count  id
+## 1     0 180 78   63 59.4 2.42  25  Yes  80500 385
+## 2     0 180 78   63 59.4 2.42  25  Yes 100080 387
+## 3     0 180 78   63 59.4 2.42  25  Yes 198770 388</code></pre>
+<p><font size="3">On PC3, glucose level, pedigree, and type have negative values while others are positive. This axis shows the relationship between diabetes indicators. The lower the score on PC3, the more likely the case is to have indicators of diabetes: high plasma glucose, high diabetes pedigree function scores, and presence of diabetes.</font></p>
+<pre class="r"><code>pca$scores %&gt;% as.data.frame %&gt;% cbind(ID, .) %&gt;% top_n(3, Comp.3)</code></pre>
+<pre><code>##    ID     Comp.1      Comp.2   Comp.3    Comp.4     Comp.5      Comp.6
+## 1  84 -1.0757309  0.08784891 2.388995  1.073299 -0.3485163 -0.39659840
+## 2  85 -0.7977291 -0.09638198 2.420601  0.936856 -0.2993574 -0.10634855
+## 3 144 -0.6593997 -5.05916784 3.105399 -1.239022  2.0818938  0.05746819
+##       Comp.7    Comp.8      Comp.9
+## 1  0.2358125 0.7798111  0.06705737
+## 2 -0.1513127 0.8895129 -0.13619922
+## 3 -1.1379854 1.5855384  0.12725665</code></pre>
+<pre class="r"><code>pca$scores %&gt;% as.data.frame %&gt;% cbind(ID, .) %&gt;% top_n(3, wt = desc(Comp.3))</code></pre>
+<pre><code>##    ID     Comp.1    Comp.2    Comp.3   Comp.4    Comp.5   Comp.6   Comp.7
+## 1 173 -0.5636882 -2.065615 -2.881819 2.788561 0.6761561 1.290122 1.532813
+## 2 174 -0.3395794 -2.214131 -2.856340 2.678569 0.7157851 1.524105 1.220736
+## 3 175 -0.3541116 -2.204501 -2.857992 2.685701 0.7132154 1.508932 1.240972
+##       Comp.8    Comp.9
+## 1 0.05300774 0.4257016
+## 2 0.14144290 0.2618480
+## 3 0.13570837 0.2724730</code></pre>
+<pre class="r"><code>PimfolID %&gt;% filter(ID %in% c(&quot;84&quot;, &quot;85&quot;, &quot;144&quot;))</code></pre>
+<pre><code>##   npreg glu  bp skin  bmi   ped age type  Count  id
+## 1     7  81  78   40 46.7 0.261  42   No   7900  84
+## 2     7  81  78   40 46.7 0.261  42   No  50560  85
+## 3     0 129 110   46 67.1 0.319  26  Yes 237200 144</code></pre>
+<pre class="r"><code>PimfolID %&gt;% filter(ID %in% c(&quot;173&quot;, &quot;174&quot;, &quot;175&quot;))</code></pre>
+<pre><code>##   npreg glu bp skin  bmi   ped age type Count  id
+## 1     4 197 70   39 36.7 2.329  31   No 10300 173
+## 2     4 197 70   39 36.7 2.329  31   No 44690 174
+## 3     4 197 70   39 36.7 2.329  31   No 42460 175</code></pre>
+<p><font size="3">Finally, I will create a plot that visualizes the correlation between all of the variables on PC1 and PC2. This plot visualizes the above mentioned relationships on PC1 and PC2, with health indicator variables in the same direction and opposite follicle count on PC1 and health indicators and follicle count in the opposite direciton of number of pregnancies and age on PC2. Small angles between the variables indicate a stronger correlation. Age and number of pregnancies are the most strongly correlated since they are overlapping, and skin fold thickness and bmi are the second most highly correlated. Number of pregancies and follicle count are of the same magnitude but in completely opposite directions. Since follicle count is known to decrease with age and women who have a longer period of time to have children (greater age), it makes sense that these variables are in opposite directions.</font></p>
+<pre class="r"><code>library(tibble)
+pca$loadings[1:9, 1:2] %&gt;% as.data.frame %&gt;% rownames_to_column %&gt;% ggplot() + 
+    geom_hline(aes(yintercept = 0), lty = 2) + geom_vline(aes(xintercept = 0), 
+    lty = 2) + ylab(&quot;PC2&quot;) + xlab(&quot;PC1&quot;) + geom_segment(aes(x = 0, y = 0, xend = Comp.1, 
+    yend = Comp.2), arrow = arrow(), col = &quot;red&quot;) + geom_label(aes(x = Comp.1 * 
+    1.1, y = Comp.2 * 1.1, label = rowname)) + ggtitle(&quot;Correlation and Variance of Variables on PC1 and PC2&quot;)</code></pre>
+<p><img src="/Project1_files/figure-html/unnamed-chunk-12-1.png" width="768" style="display: block; margin: auto;" /></p>
+</div>

@@ -1,0 +1,135 @@
+---
+title: 'Data Wrangling and Exploration'
+author: "Brenna Briles"
+date: "10/20/2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r global_options, include=FALSE}
+library(knitr)
+opts_chunk$set(fig.align="center", fig.height=5, message=FALSE, warning=FALSE, fig.width=8, tidy=TRUE)
+```
+#Introduction  
+<font size="3"> The "follicle" dataset contains information regarding follicle formation in women of varying ages. It includes variables "Age" which is the age of the woman at the time of follicle counting, "Count" which is the number of follicles in the ovaries, and "Source" which is the source of the data. The "Pima.te" dataset contains information gathered from a population of women of Pima Indian descent. It contians variables "npreg" for number of pregnancies, "glu" for plasma glucose concentration in an oral glucose tolerance test, "bp" for diastolic blood pressure in mmHg, "skin" for skin fold thickness in millimeters, "bmi" for body mass index, "ped" for diabetes pedigree function, "age" for age in years, and "type" for diabetic status (yes or no). The diabetes pedigree function is a score of a person's liklihood of diabetes based on family history. These data sets are interesting to me because I hope to go into the field of obstetrics and gynecology in my future career. I am interested to see how follicle count will compare across women with and without diabetes because diabetes has been studied as a contributor to infertility. I'm also interested to see how follicle counts vary by BMI, as it is another factor known to influence fertility.</font>
+
+#Tidying and Joining  
+<font size="3">The two datasets are tidy in their original form. I will join the datasets using inner_join() because I want each blood pressure and BMI measurement in the Pima.te dataset to have an associated follicle count and am not interested in retaining cases that do not have these associated values. The inner join will drop any values that do not have a match in the other dataset.  Eighty eight cases are lost from Pima.te, and 27 cases are lost from follicle. The missing cases were found using anit_join() to see the cases in follicle that did not have a match in Pima.te and vice versa. Of the cases that were lost from Pima.te, 72 were non-diabetic while 14 were diabetic. This could cause a potential problem when looking at relationships across the two categories since the number of cases in each category is skewed.</font>
+
+```{R, echo=T}
+library(dplyr)
+library(MASS)
+library(sm)
+Pimfol<-inner_join(Pima.te, follicle, by=c("age"="Age"))
+missing<-anti_join(follicle, Pima.te, by=c("Age"="age"))
+missing2<-missing<-anti_join(Pima.te, follicle, by=c("age"="Age"))
+table(missing2$type)
+```
+
+#Data Wrangling and Visualization  
+<font size="3">To begin analyzing the joined dataset, I will first remove "source" using select() because I'm not interested in analyzing the source of the follicle data. I will employ summarize() to get the mean, standard deviation, minimum, and maximum for number of pregnancies, glucose level, bmi, and follicle count. This function creates a wide data set, so I will tidy it using pivot_longer() to bring the column names into rows, separate() to create columns of the statistics and variables, and finally pivot_wider() to create colums of Mean, Sd, Min, and Max with their corresponding values.</font>
+
+```{R, echo=T}
+Pimfol1<-Pimfol %>% dplyr::select(-Source)
+stats<-Pimfol1 %>% summarize(Mean.Preg=mean(npreg), Mean.Glu=mean(glu),Mean.Bmi=mean(bmi), Mean.Count=mean(Count), Sd.Preg=sd(npreg), Sd.Glu=sd(glu), Sd.Bmi=sd(bmi), Sd.Count=sd(Count), Min.Preg=min(npreg), Min.Glu=min(glu), Min.Bmi=min(bmi), Min.Count=min(Count), Max.Preg=max(npreg), Max.Glu=max(glu), Max.Bmi=max(bmi), Max.Count=max(Count))
+
+library(tidyr)
+tidystats<-stats%>%pivot_longer(contains("."))%>%separate(name, into = c("stat", "variable"))%>%
+  pivot_wider(names_from = "stat", values_from = "value")
+print(tidystats)
+```
+
+<font size="3">Now, I want to see how these statistics compare between women with and without diabetes. I will use group_by(type) to separate the cases into diabetic and non-diabetic (yes means diabetic).I will tidy the resulting statistics table the same way as before. I will use arrange() to place the same variables of the two groups next to each other so they can be easily compared. I will also use group_by() along with filter() to determine that maximum number of pregnancies within the diabetic and non-diabetic groups.</font>
+
+```{R, echo=T}
+stats2<-Pimfol1%>%group_by(type)%>%summarize(Mean.Preg=mean(npreg), Mean.Glu=mean(glu),Mean.Bmi=mean(bmi), Mean.Count=mean(Count), Sd.Preg=sd(npreg), Sd.Glu=sd(glu), Sd.Bmi=sd(bmi), Sd.Count=sd(Count), Min.Preg=min(npreg), Min.Glu=min(glu), Min.Bmi=min(bmi), Min.Count=min(Count), Max.Preg=max(npreg), Max.Glu=max(glu), Max.Bmi=max(bmi), Max.Count=max(Count))
+
+tidystats2<-stats2%>%pivot_longer(contains("."))%>%separate(name, into = c("stat", "variable"))%>%
+  pivot_wider(names_from = "stat", values_from = "value")%>%arrange(variable)
+print(tidystats2)
+
+Pimfol1%>%group_by(type)%>%filter(npreg==max(npreg))
+```
+<font size="3">The maximum number of pregnancies in the non-diabetic group was 13 and 17 in the diabetic group. This was a surprisng result, since I was expected diabetes to negatively affect number of pregnancies. The mean, minimum, and maximum glucose level and BMI are noticeably higher in the diabetic group. I will use ggplot() to create a table visualizing the relationship between these variables by diabetic status. The colors of the points will represent skin fold thickness since it was not included in the summary statistics, and I would like to see how it compares to bmi.</font>
+
+```{R, echo=F}
+library(ggplot2)
+```
+```{R, echo=T}
+ggplot(data=Pimfol1, aes(x=glu, y=bmi, color=skin))+geom_point()+
+  facet_wrap(~type)+scale_x_continuous(breaks = seq(0, 200, 25))+
+  ggtitle("Plasma Glucose Level and BMI in Diabetic and Non-Diabetic Women")
+```
+
+<font size="3">These plots show a only a slightly positive relationship between BMI and glucose level, but I was expecting a more pronounced trend. The skin fold thickness trends are different across the two categories. For the non-diabetics, skin fold thickness is the least at smaller values of BMI and glucose, with most higher values of glucose level having higher skin fold thickness values. However, for the diabetic category, there are low values of skin fold thickness across the entire range of glucose values. This is surprsing, as I was expecting them to have the same skin fold thickness vs glucose relationship.</font>
+
+<font size="3">I'd like to see what patterns exist when the follicle count is divided by the age of the woman. I will use mutate() to create this new variable, Rate, and arrange in order of descinding rate. The result shows that women of greater age have a smaller rate. I will visualize this trend using ggplot(). I will color the points by number of pregnancies. </font>
+
+```{R, echo=T}
+Pimfol1%>%mutate(Rate=Count/age)%>%arrange(Rate)%>%glimpse()
+
+Pimfol1%>%ggplot(aes(x=age, y=Count, color=npreg))+geom_point(size=4)+
+  facet_wrap(~type)+
+  ggtitle("Comparing Ovarian Follicle Abundance and Age")+
+  theme_bw()+scale_color_gradient(low="blue", high="red")
+```
+
+<font size="3">Again, follicle counts become very low when the maximum age is reached. This trend is interesting because it visualizes the effects of menopause, the period in which the ovaries cease production of estrogen and progesterone and subsequently no longer produce follicles. Ths pattern holds for diabetic and non-diabetic women. Since women of older ages have more time to have children, the relationship between follicle count and number of pregancies needs to be analyzed among women of the same age. There is not a clear relationship between follicle count and number of pregnancies when analyzed this way. If the relationship I expected was visualized, we would see a clear gradient from red at high follicle counts to blue at low follicle counts at each age.</font>
+
+#Dimensionality Reduction  
+<font size="3">To generate a summary of variance in the dataset, I will preform a Principle Component Analysis. This will require scaling the data and turning it into a data frame. To include type in the analysis, it will be transformed to a numeric variable using mutate_if(). PCA analysis will show the relationships in my data set's variance in the form of principle components. To generate eigenvalues, I will use eigen() on the correlation matrix of the numeric values of the dataset. I will keep the first three principle components, following Kaiser's rule, because their eigenvalues are greater than one.</font>
+
+```{R, echo=T}
+library(dplyr)
+Pimfolnums<-Pimfol1%>%mutate_if(is.factor, as.numeric)%>%scale()
+pca<-princomp(Pimfolnums)
+summary(pca, loadings=T)
+eigen(cor(Pimfolnums))
+
+results<-Pimfolnums%>%as.data.frame%>%
+  mutate(PC1=pca$scores[,1], PC2=pca$scores[,2], PC3=pca$scores[,3])
+```
+
+<font size="3">I will use ggplot() to visualize the scores that result from the PCA. This figure shows a few clear outliers which I will identify to further conceptualize the PCA scores.</font> 
+
+```{R, echo=T}
+results%>%ggplot(aes(PC1, PC2))+geom_point(size=2)+ggtitle("Principle Component Scores on PC1 and PC2")
+```
+
+<font size="3">PC1 is an axis that shows the general effect of health on fertility. High scores on PC1 have better general health indicators. Further, those cases with high follicle counts have low values of all of the other variables, indicated by negative scores for all of the variables except Count. This pattern is exemplifed by comparing the highest and lowest three scores on PC1 as shown. I attached ID values to each case using mutate() to be able to identify characteristics of the cases with the highest and lowest PC scores.</font>
+
+```{R}
+PimfolID <- Pimfol1 %>% mutate(id = row_number())
+ID<-PimfolID$id
+pca$scores%>%as.data.frame%>%cbind(ID,.)%>%top_n(3,Comp.1)
+pca$scores%>%as.data.frame%>%cbind(ID,.)%>%top_n(3,wt=desc(Comp.1))
+PimfolID%>%filter(ID%in%c("44", "390", "514"))
+PimfolID%>%filter(ID%in%c("122", "124", "127"))
+```
+
+<font size="3">On PC2, all scores have positive values except for number of pregancies and age. The cases with the highest scores on PC2 are 48 years old, have had 7 pregnancies, are not diabetic, and have the same values for glucose, blood pressure, skin thickness, pedigree, and BMI. The cases with the lowest scores on PC2 are 25 years old, have had no pregnancies, are diabetic, and also have the same scores for the same variables as the three highest scores. Overall, higher scores on PC2 indicate older age, lower follicle count, no presence of diabetes, and higher numer of pregnancies. This relationship was similarly visualized in the figure comparing follicle count, age, and number of pregnancies above.</font>
+
+```{R, echo=T}
+pca$scores%>%as.data.frame%>%cbind(ID,.)%>%top_n(3,Comp.2)
+pca$scores%>%as.data.frame%>%cbind(ID,.)%>%top_n(3,wt=desc(Comp.2))
+PimfolID%>%filter(ID%in%c("37", "38", "39"))
+PimfolID%>%filter(ID%in%c("385", "387", "388"))
+```
+
+<font size="3">On PC3, glucose level, pedigree, and type have negative values while others are positive. This axis shows the relationship between diabetes indicators. The lower the score on PC3, the more likely the case is to have indicators of diabetes: high plasma glucose, high diabetes pedigree function scores, and presence of diabetes.</font>
+
+```{R, echo=T}
+pca$scores%>%as.data.frame%>%cbind(ID,.)%>%top_n(3,Comp.3)
+pca$scores%>%as.data.frame%>%cbind(ID,.)%>%top_n(3,wt=desc(Comp.3))
+PimfolID%>%filter(ID%in%c("84", "85", "144"))
+PimfolID%>%filter(ID%in%c("173", "174", "175"))
+```
+
+<font size="3">Finally, I will create a plot that visualizes the correlation between all of the variables on PC1 and PC2. This plot visualizes the above mentioned relationships on PC1 and PC2, with health indicator variables in the same direction and opposite follicle count on PC1 and health indicators and follicle count in the opposite direciton of number of pregnancies and age on PC2. Small angles between the variables indicate a stronger correlation. Age and number of pregnancies are the most strongly correlated since they are overlapping, and skin fold thickness and bmi are the second most highly correlated. Number of pregancies and follicle count are of the same magnitude but in completely opposite directions. Since follicle count is known to decrease with age and women who have a longer period of time to have children (greater age), it makes sense that these variables are in opposite directions.</font>
+
+```{R, echo=T}
+library(tibble)
+pca$loadings[1:9,1:2]%>%as.data.frame%>%rownames_to_column%>%ggplot()+geom_hline(aes(yintercept=0),lty=2)+  geom_vline(aes(xintercept=0),lty=2)+ylab("PC2")+xlab("PC1")+  geom_segment(aes(x=0,y=0,xend=Comp.1,yend=Comp.2),arrow=arrow(),col="red")+  geom_label(aes(x=Comp.1*1.1,y=Comp.2*1.1,label=rowname))+
+  ggtitle("Correlation and Variance of Variables on PC1 and PC2")
+```

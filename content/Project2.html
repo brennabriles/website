@@ -1,0 +1,354 @@
+---
+title: 'Modeling, Testing, and Predicting'
+author: "Brenna Briles"
+date: "11/26/2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>The CPS85 dataset contains information relating wage in US dollars, number of years of education (edu), across categories of race, sex, Hispanic ethnicity, marriage status, years of work experience (exper), worker union membership (union), age, region of residence (south), and work sector. This data was gathered from the Current Population Survey in 1985. I chose this dataset because I am interested to see what relationships arise between education, race, and sex as well as relationships between wages, marriage, and union memberships.</p>
+</div>
+<div id="multivariate-analysis-of-variance-testing" class="section level1">
+<h1>Multivariate Analysis of Variance Testing</h1>
+<p>A one-way MANOVA was conducted to determine the effect of sex on number of years of education and wage earning. Significant differences were found between the sexes on education and wage (p&lt;0.00001). Subsequently, univariate analyses of variance (ANOVAs) were peformed for education and wage. Bonferroni correction was used to control overall Type I error. The probability of Type I error without adjustment would be 14.2625%. Since there were three tests performed (one MANOVA and two ANOVAs), the new alpha value is 0.017. The univariate ANOVA for wage was significant (F=23.426, p&lt;0.0001) but not for education (F=0.0022, p&gt;0.05). Therefore, the mean wage is significantly different between males and females. Post-hoc analysis not necessary since there are only two groups in the sex variable. If there were more than two groups in the ANOVA test, post-hoc analysis would have been performed to determine which group means differ.</p>
+<p>Random sampling and independent observations can be assumed to be met. By plotting the explanatory variables against one another as shown, it is likely that the assumption of multivariate normality is not met but the assumption of linearity is met. There seems to be several multivariate outliers in the “Assumption of Linearity” plot, so this assumption is likely not met. The assumption of no multicollinearity can be met from this plot as well. Comparing covariances between the male and female group shows that the assumption of homogeneous covariances is likely to have been met.</p>
+<pre class="r"><code>library(mosaicData)
+man&lt;-manova(cbind(wage, educ)~sex, data=CPS85)
+summary(man)</code></pre>
+<pre><code>## Df Pillai approx F num Df den Df Pr(&gt;F)
+## sex 1 0.049758 13.902 2 531 1.303e-06 ***
+## Residuals 532
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<pre class="r"><code>summary.aov(man)</code></pre>
+<pre><code>## Response wage :
+## Df Sum Sq Mean Sq F value Pr(&gt;F)
+## sex 1 593.7 593.71 23.426 1.703e-06 ***
+## Residuals 532 13483.0 25.34
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1
+##
+## Response educ :
+## Df Sum Sq Mean Sq F value Pr(&gt;F)
+## sex 1 0.0 0.015 0.0022 0.9627
+## Residuals 532 3645.8 6.853</code></pre>
+<pre class="r"><code>1-(1-0.05)^3</code></pre>
+<pre><code>## [1] 0.142625</code></pre>
+<pre class="r"><code>0.05/3</code></pre>
+<pre><code>## [1] 0.01666667</code></pre>
+<pre class="r"><code>ggplot(CPS85, aes(x=wage, y=educ))+geom_point(aes(color=sex))+ggtitle(&quot;Assumption of Linearity&quot;)</code></pre>
+<p><img src="/Project2_files/figure-html/unnamed-chunk-1-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggplot(CPS85, aes(x=wage, y=educ))+geom_point(alpha=.5)+geom_density_2d(h=2)+coord_fixed()+
+  facet_wrap(~sex)+ggtitle(&quot;Multivariate Normality&quot;)</code></pre>
+<p><img src="/Project2_files/figure-html/unnamed-chunk-1-2.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>covmats&lt;-CPS85%&gt;%group_by(sex)%&gt;%do(covs=cov(.[1:2]))
+for (i in 1:2) {print(covmats$covs[i])}</code></pre>
+<pre><code>## [[1]]
+##           wage     educ
+## wage 22.279470 5.049372
+## educ  5.049372 5.901037
+## 
+## [[1]]
+##           wage     educ
+## wage 27.940258 5.232571
+## educ  5.232571 7.659530</code></pre>
+</div>
+<div id="randomization-testing" class="section level1">
+<h1>Randomization Testing</h1>
+<p>A permutation test with 5000 permutations was conducted to determine if wage differed by participation in unions. The null hypothesis is that the mean wage is not significantly different between union and non-union workers. The alternative hypothesis is that the mean wage is different for union and non-union workers. By comparing the random distribution with the mean difference of the actual dataset, it is concluded that there is a significant difference in mean wage between union and non-union workers (p=0.0004). The null distribution of the randomization test is shown, with the test statistic at the acutal mean difference of $2.162897.</p>
+<pre class="r"><code>randdist&lt;-vector()
+for (i in 1:5000) {
+new&lt;-data.frame(wage=sample(CPS85$wage), union=CPS85$union)  
+randdist[i]&lt;-mean(new[new$union==&quot;Union&quot;,]$wage)-
+  mean(new[new$union==&quot;Not&quot;,]$wage)
+}
+CPS85%&gt;%group_by(union)%&gt;%summarize(means=mean(wage))%&gt;%summarize(`mean_diff:`=diff(means))</code></pre>
+<pre><code>## # A tibble: 1 x 1
+##   `mean_diff:`
+##          &lt;dbl&gt;
+## 1         2.16</code></pre>
+<pre class="r"><code>mean(randdist&gt;2.162897)*2</code></pre>
+<pre><code>## [1] 0</code></pre>
+<pre class="r"><code>hist(randdist, main = &quot;Null Distribution&quot;, xlab=&quot;Random Distribution Mean Difference&quot;); abline(v=2.162897, col=&quot;red&quot;)</code></pre>
+<p><img src="/Project2_files/figure-html/unnamed-chunk-2-1.png" width="768" style="display: block; margin: auto;" /></p>
+</div>
+<div id="linear-regression-models" class="section level1">
+<h1>Linear Regression Models</h1>
+<p>A linear regression model predicting wage from years of work experience and work sector, including interaction, was created using mean centered wage and work experience. The coefficient estimates from the model showed positive main effects of years of work experience and work sector on wage. Controlling for sector, one year of increase in work experience overall results in a $0.05 increase in wage. Wage increases by $1.50 for every one year increase in work experience for construction sector workers, $5.25 for management, $0.58 for manufacturing, $1.28 for other, $4.65 for professionals, $0.07 for sales, and decreases by $0.90 for service industry workers. For construction workers, wage is increased by 0.091141 times the number of years of experience, 0.002580 times experience for management, 0.030620 times experience for other, 0.002399 times experience for professionals, 0.079792 times experience for sales. For service workers, wage is decreased by 0.056461 times years of experience and 0.053097 times experience for manufacturers. The adjusted R^2 value indicates that the predictor variables explain 18.64% of the variation in wage. A plot of this model is shown.</p>
+<pre class="r"><code>CPS85$experc&lt;-CPS85$exper-mean(CPS85$exper, na.rm = T)
+CPS85$wagec&lt;-CPS85$wage-mean(CPS85$wage, na.rm = T)
+fit&lt;-lm(wagec~experc*sector, data=CPS85)
+summary(fit)</code></pre>
+<pre><code>##
+## Call:
+## lm(formula = wagec ~ experc * sector, data = CPS85)
+##
+## Residuals:
+## Min 1Q Median 3Q Max
+## -12.065 -3.038 -0.992 2.048 32.837
+##
+## Coefficients:
+## Estimate Std. Error t value Pr(&gt;|t|)
+## (Intercept) -1.587197 0.470743 -3.372 0.000803 ***
+## experc 0.058376 0.039020 1.496 0.135251
+## sectorconst 1.507749 1.181418 1.276 0.202450
+## sectormanag 5.251856 0.782593 6.711 5.09e-11 ***
+## sectormanuf 0.588830 0.737898 0.798 0.425246
+## sectorother 1.286084 0.744295 1.728 0.084598 .
+## sectorprof 4.654292 0.661192 7.039 6.16e-12 ***
+## sectorsales 0.069373 0.887849 0.078 0.937750
+## sectorservice -0.903937 0.698046 -1.295 0.195913
+## experc:sectorconst 0.091141 0.093308 0.977 0.329136
+## experc:sectormanag 0.002580 0.067805 0.038 0.969662
+## experc:sectormanuf -0.053097 0.057696 -0.920 0.357850
+## experc:sectorother 0.030620 0.064418 0.475 0.634751
+## experc:sectorprof 0.002399 0.058987 0.041 0.967577
+## experc:sectorsales 0.079792 0.068649 1.162 0.245641
+## experc:sectorservice -0.056461 0.052269 -1.080 0.280556
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1
+##
+## Residual standard error: 4.635 on 518 degrees of freedom
+## Multiple R-squared: 0.2093, Adjusted R-squared: 0.1864
+## F-statistic: 9.143 on 15 and 518 DF, p-value: &lt; 2.2e-16</code></pre>
+<pre class="r"><code>CPS85%&gt;%ggplot(aes(x=experc, y=wagec, group=sector))+geom_point(aes(color=sector))+geom_smooth(method=&quot;lm&quot;, formula = y~1, se=F, fullrange=T, aes(color=sector))+theme(legend.position = c(.9, .65))+xlab(&quot;Years Experience&quot;)+ylab(&quot;Wage ($)&quot;)+ggtitle(&quot;Predicting Wage from Sector and Experience&quot;)</code></pre>
+<p><img src="/Project2_files/figure-html/unnamed-chunk-3-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p>A scatterplot of residuals versus fitted values from the linear regression model shows that the assumptions of linearity and heteroskedasticity are met. A Breusch-Pagan test was also conducted to determine if the assumption of heteroskedasticity is met. The test was significant (p&lt;0.05), so the null hypothesis of homoskedasticity is rejected and the assumption of heteroskedasticity is met. A Shapiro-Wilk normality test was conducted to determine if the assumption of normality is met. The test was significant (p&lt;0.05), so the null hypothesis of normality is rejected and the assumption of normality is not met. Since the assumption of normality is not met, robust standard errors are used. With robust standard errors, there are significant effects of years of work experience, managment sector, and professional sector on wage (p&lt;0.05). This differs from the previous model where years of experience was not significant. Standard error values are also smaller when using robust standard errors than in the orignal model.</p>
+<pre class="r"><code>resids&lt;-fit$residuals
+fitvals&lt;-fit$fitted.values
+ggplot()+geom_point(aes(fitvals, resids))+geom_hline(yintercept = 0, color=&quot;red&quot;)</code></pre>
+<p><img src="/Project2_files/figure-html/unnamed-chunk-4-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>shapiro.test(resids)</code></pre>
+<pre><code>## 
+##  Shapiro-Wilk normality test
+## 
+## data:  resids
+## W = 0.91645, p-value &lt; 2.2e-16</code></pre>
+<pre class="r"><code>library(sandwich)
+library(lmtest)
+bptest(fit) </code></pre>
+<pre><code>## 
+##  studentized Breusch-Pagan test
+## 
+## data:  fit
+## BP = 44.233, df = 15, p-value = 0.0001011</code></pre>
+<pre class="r"><code>coeftest(fit, vcov=vcovHC(fit))</code></pre>
+<pre><code>##
+## t test of coefficients:
+##
+## Estimate Std. Error t value Pr(&gt;|t|)
+## (Intercept) -1.5871972 0.2695324 -5.8887 7.005e-09 ***
+## experc 0.0583762 0.0224173 2.6041 0.009477 **
+## sectorconst 1.5077485 0.8093291 1.8630 0.063034 .
+## sectormanag 5.2518560 1.0987416 4.7799 2.288e-06 ***
+## sectormanuf 0.5888297 0.5739392 1.0259 0.305397
+## sectorother 1.2860840 0.6762793 1.9017 0.057764 .
+## sectorprof 4.6542923 0.6387116 7.2870 1.190e-12 ***
+## sectorsales 0.0693727 0.6832485 0.1015 0.919166
+## sectorservice -0.9039366 0.5128603 -1.7625 0.078568 .
+## experc:sectorconst 0.0911408 0.0665555 1.3694 0.171469
+## experc:sectormanag 0.0025800 0.1161352 0.0222 0.982285
+## experc:sectormanuf -0.0530969 0.0385616 -1.3769 0.169126
+## experc:sectorother 0.0306197 0.0583499 0.5248 0.599974
+## experc:sectorprof 0.0023988 0.0647861 0.0370 0.970478
+## experc:sectorsales 0.0797917 0.0604801 1.3193 0.187650
+## experc:sectorservice -0.0564612 0.0352223 -1.6030
+0.109546
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<p>After re-running the regression model without interaction, the same variables are significant as in the robust stanard errors model: years of work experience, management sector, and professonal sector. This also differs from the interaction model in that it includes years of work experience as a significant variable in explaining variation in wage. This model also has a marginally smaller adjusted R^2 value: the predictor variables without interaction explain 18.56% of the variation in wage.</p>
+<pre class="r"><code>mainfit&lt;-lm(wagec~experc+sector, data=CPS85)
+summary(mainfit) </code></pre>
+<pre><code>##
+## Call:
+## lm(formula = wagec ~ experc + sector, data = CPS85)
+##
+## Residuals:
+## Min 1Q Median 3Q Max
+## -12.011 -3.001 -0.945 1.924 32.679
+##
+## Coefficients:
+## Estimate Std. Error t value Pr(&gt;|t|)
+## (Intercept) -1.58883 0.47091 -3.374 0.000796 ***
+## experc 0.05172 0.01643 3.147 0.001740 **
+## sectorconst 1.87394 1.14080 1.643 0.101054
+## sectormanag 5.25580 0.78286 6.714 4.94e-11 ***
+## sectormanuf 0.49955 0.73441 0.680 0.496670
+## sectorother 1.19459 0.73445 1.627 0.104442
+## sectorprof 4.63452 0.65406 7.086 4.47e-12 ***
+## sectorsales 0.12505 0.88767 0.141 0.888022
+## sectorservice -1.02039 0.69479 -1.469 0.142530
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1
+##
+## Residual standard error: 4.638 on 525 degrees of freedom
+## Multiple R-squared: 0.1978, Adjusted R-squared: 0.1856
+## F-statistic: 16.18 on 8 and 525 DF, p-value: &lt; 2.2e-16</code></pre>
+<p>Re-running the interaction model with bootstrapped standard errors shows that, in general, bootstrapped standard errors are less than the those of the model using robust standard errors. The same holds when comparing bootstrapped standard errors with those of the original model.</p>
+<pre class="r"><code>sampdist&lt;-replicate(5000, {
+  bootdata&lt;-CPS85[sample(nrow(CPS85), replace=TRUE),]
+  fit3&lt;-lm(wagec~experc*sector, data=bootdata)
+  coef(fit3)
+})
+sampdist%&gt;%t%&gt;%as.data.frame%&gt;%summarise_all(sd) </code></pre>
+<pre><code>## (Intercept) experc sectorconst sectormanag sectormanuf
+sectorother sectorprof sectorsales
+## 1 0.2680306 0.02190799 0.7488399 1.077377 0.5773624
+0.6760003 0.6303497 0.6726547
+## sectorservice experc:sectorconst experc:sectormanag
+experc:sectormanuf experc:sectorother
+## 1 0.5130373 0.0627513 0.1107962 0.03882898 0.05706845
+## experc:sectorprof experc:sectorsales
+experc:sectorservice
+## 1 0.06393807 0.05678183 0.0349463</code></pre>
+</div>
+<div id="logistic-regression-models" class="section level1">
+<h1>Logistic Regression Models</h1>
+<p>A univariate binary logistic regression model was performed to test the contributions of wage and sex in predicting participation in labor unions. Coefficient estimates from the model show that controlling for wage, being male, and controlling for sex, increased wage, increase the probability of participation in a labor union since they are both positive. Exponentiated coefficient estimates from the model show that a female that makes $0 in wage has an odds of 0.07769047 (intercept) of particpating in a labor union. Controlling for wage, males have an odds 2.11431008 (sexM) times that of the odds of females of participating in a labor union. For every $1 increase in wage, odds of participating in a labor union increases by a factor of 1.06207705 (wage). All of these estimates were significant (p&lt;0.01).</p>
+<pre class="r"><code>fit4&lt;-glm(union~sex+wage, data=CPS85, family = binomial(link = &quot;logit&quot;))
+coeftest(fit4)</code></pre>
+<pre><code>##
+## z test of coefficients:
+##
+## Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept) -2.555023 0.271463 -9.4120 &lt; 2.2e-16 ***
+## sexM 0.748729 0.249076 3.0060 0.002647 **
+## wage 0.060226 0.020254 2.9735 0.002944 **
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<pre class="r"><code>exp(coef(fit4))</code></pre>
+<pre><code>## (Intercept)        sexM        wage 
+##  0.07769047  2.11431008  1.06207705</code></pre>
+<p>Classification diagnostics were calculated using the class_diag() function and confusion matrix. The model has an accuracy of 0.8183521. The model is extremely specific with a specificity of 0.9977169, meaning that the model is good at predicting when a worker is not in a labor union. However, the sensitivity of the model is zero which means the model does a very poor job of predicting when a worker does particpate in a labor union. The recall of the model is also zero since there were no workers classified as union members in the model. The figure “Comparing Log Odds by Union Participation” shows the portion of cases that were misclassified by the model in the overlapping, gray portion of the curve. The AUC for this model is 0.6757396 which means the model is predicting participation in unions poorly. Therefore, it is difficult to predict participation in a labor union based sex and wage alone.</p>
+<pre class="r"><code>prob&lt;-predict(fit4, type=&quot;response&quot;)
+table(predict=as.numeric(prob&gt;0.5), truth=CPS85$union)%&gt;%addmargins</code></pre>
+<pre><code>##        truth
+## predict Not Union Sum
+##     0   437    96 533
+##     1     1     0   1
+##     Sum 438    96 534</code></pre>
+<pre class="r"><code>logit&lt;-predict(fit4) #get predicted log-odds
+outcome&lt;-factor(CPS85$union,levels=c(&quot;Union&quot;,&quot;Not&quot;))
+ggplot(CPS85,aes(logit, fill=outcome))+geom_density(alpha=.3)+
+  geom_vline(xintercept=0,lty=2)+ggtitle(&quot;Comparing Log Odds by Union Participation&quot;)</code></pre>
+<p><img src="/Project2_files/figure-html/unnamed-chunk-8-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>class_diag&lt;-function(probs,truth){
+  
+  tab&lt;-table(factor(probs&gt;.5,levels=c(&quot;FALSE&quot;,&quot;TRUE&quot;)),truth)
+  acc=sum(diag(tab))/sum(tab)
+  sens=tab[2,2]/colSums(tab)[2]
+  spec=tab[1,1]/colSums(tab)[1]
+  ppv=tab[2,2]/rowSums(tab)[2]
+
+  if(is.numeric(truth)==FALSE &amp; is.logical(truth)==FALSE) truth&lt;-as.numeric(truth)-1
+  
+  ord&lt;-order(probs, decreasing=TRUE)
+  probs &lt;- probs[ord]; truth &lt;- truth[ord]
+  
+  TPR=cumsum(truth)/max(1,sum(truth)) 
+  FPR=cumsum(!truth)/max(1,sum(!truth))
+  
+  dup&lt;-c(probs[-1]&gt;=probs[-length(probs)], FALSE)
+  TPR&lt;-c(0,TPR[!dup],1); FPR&lt;-c(0,FPR[!dup],1)
+  
+  n &lt;- length(TPR)
+  auc&lt;- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+
+  data.frame(acc,sens,spec,ppv,auc)
+}
+class_diag(prob, CPS85$union) </code></pre>
+<pre><code>##             acc sens      spec ppv       auc
+## Union 0.8183521    0 0.9977169   0 0.6757396</code></pre>
+<pre class="r"><code>library(plotROC)
+ggplot(CPS85)+geom_roc(aes(d=union, m=prob), n.cuts = 0)+ggtitle(&quot;ROC Plot&quot;)</code></pre>
+<p><img src="/Project2_files/figure-html/unnamed-chunk-8-2.png" width="768" style="display: block; margin: auto;" /></p>
+<p>A ten fold cross validation performd on the logistic regression model showed an out of sample accuracy and AUC value that were much less than the in sample values: 0.1254368 and 0.5287863, respectively. Since the model performed much worse on the tested dataset, it was likely overfitting to the training dataset and subsequently does not predict well out of sample. The out of sample sensitivity and specificity are almost the same as the within sample: 0 and 1, respectively. Recall was not available for this model since sensitivity was zero.</p>
+<pre class="r"><code>set.seed(1234)
+k=10
+
+data1&lt;-CPS85[sample(nrow(CPS85)),]
+folds&lt;-cut(seq(1:nrow(CPS85)),breaks=k,labels=F)
+
+diags&lt;-NULL
+for(i in 1:k){
+  train&lt;-data1[folds!=i,]
+  test&lt;-data1[folds==i,]
+  truth&lt;-test$r
+  
+  fit5&lt;-glm(union~sex+wage, data=train, family = binomial(link = &quot;logit&quot;))
+  probs&lt;-predict(fit5,newdata = test,type=&quot;response&quot;)
+  
+  diags&lt;-rbind(diags,class_diag(probs,truth))
+}
+
+apply(diags,2,mean)</code></pre>
+<pre><code>##       acc      sens      spec       ppv       auc 
+## 0.1254368 0.0000000 1.0000000       NaN 0.5287863</code></pre>
+</div>
+<div id="lasso-regression" class="section level1">
+<h1>LASSO Regression</h1>
+<p>A univariate binary logistic regression was performed to test the contribution of wage, sex, race, sector, union participation, years of education, ethnicity, region of residence, years of work experience, and age in predicting marriage status. A 10 fold cross validation was performed on this model to determine out of sample classification diagnostics. The out of sample AUC, PPV, accuracy, sensitivy, and specificity were 0.4180350 , 0.7812052, 0.2265199, 0.1539623, and 0.7173016, respectively. A LASSO regression was performed to determine which of these predictors was most important in predicting marriage status. The LASSO regression showed that age is the most important predictor.</p>
+<pre class="r"><code>#library(glmnet)
+set.seed(1234)
+k=10
+
+data1&lt;-CPS85[sample(nrow(CPS85)),]
+folds&lt;-cut(seq(1:nrow(CPS85)),breaks=k,labels=F)
+
+diags&lt;-NULL
+for(i in 1:k){
+  train&lt;-data1[folds!=i,]
+  test&lt;-data1[folds==i,]
+  truth&lt;-test$r
+  
+  fit6&lt;-glm(married~wage+sex+race+sector+union+educ+hispanic+south+exper+age, data = train, family = binomial(link=&quot;logit&quot;))
+  probs&lt;-predict(fit6,newdata = test,type=&quot;response&quot;)
+  
+  diags&lt;-rbind(diags,class_diag(probs,truth))
+}
+
+apply(diags,2,mean)</code></pre>
+<pre><code>##       acc      sens      spec       ppv       auc 
+## 0.2265199 0.1539623 0.7173016 0.7812052 0.4180350</code></pre>
+<pre class="r"><code>fit6&lt;-glm(married~-1+wage+sex+race+sector+union+educ+hispanic+south+exper+age, data = CPS85, family = &quot;binomial&quot;)
+set.seed(1234)
+x&lt;-model.matrix(fit6)
+x&lt;-scale(x)
+y&lt;-as.matrix(CPS85$married)  
+#cv&lt;-cv.glmnet(x,y, family=&quot;binomial&quot;)
+#lasso&lt;-glmnet(x,y,family=&quot;binomial&quot;,lambda=cv$lambda.1se)
+#coef(lasso)</code></pre>
+<p>A univariate binary logistic regression was performed predicting marriage status from solely age, and a 10 fold cross validation was conducted. The out of sample AUC, PPV, accuracy, sensitivy, and specificity were 0.5166482, 0.8810678, 0.2266247, 0.1331484, and 0.8769841, respectively. The new AUC is higher than that of the model with all predictor variables while accuracy is nearly the same. The model predicting marriage from solely age performs better than the model using all variables.</p>
+<pre class="r"><code>set.seed(1234)
+k=10
+
+data1&lt;-CPS85[sample(nrow(CPS85)),]
+folds&lt;-cut(seq(1:nrow(CPS85)),breaks=k,labels=F)
+
+diags&lt;-NULL
+for(i in 1:k){
+  train&lt;-data1[folds!=i,]
+  test&lt;-data1[folds==i,]
+  truth&lt;-test$r
+  
+  fit7&lt;-glm(married~age, data=train, family = binomial(link = &quot;logit&quot;))
+  probs&lt;-predict(fit7,newdata = test,type=&quot;response&quot;)
+  
+  diags&lt;-rbind(diags,class_diag(probs,truth))
+}
+
+apply(diags,2,mean)</code></pre>
+<pre><code>##       acc      sens      spec       ppv       auc 
+## 0.2266247 0.1331484 0.8769841 0.8810678 0.5166482</code></pre>
+</div>
